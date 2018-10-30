@@ -72,7 +72,7 @@ LDLIBSOPTIONS=-lgtest -lgtest_main
 
 ${CND_DISTDIR}/${CND_CONF}/${CND_PLATFORM}/ccswarm: ${OBJECTFILES}
 	${MKDIR} -p ${CND_DISTDIR}/${CND_CONF}/${CND_PLATFORM}
-	${LINK.cc} -o ${CND_DISTDIR}/${CND_CONF}/${CND_PLATFORM}/ccswarm ${OBJECTFILES} ${LDLIBSOPTIONS} -lzmq -pthread -lgtest
+	${LINK.cc} -o ${CND_DISTDIR}/${CND_CONF}/${CND_PLATFORM}/ccswarm ${OBJECTFILES} ${LDLIBSOPTIONS} -lzmq -pthread -lgtest -lboost_filesystem -lboost_program_options
 
 ${OBJECTDIR}/comParser.o: comParser.cpp
 	${MKDIR} -p ${OBJECTDIR}

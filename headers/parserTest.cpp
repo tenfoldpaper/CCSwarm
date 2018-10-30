@@ -6,12 +6,31 @@
 
 #include <gtest/gtest.h>
 #include "comParser.h"
-
+#include <iostream>
+#include <string>
 TEST(ParserTest, Checkers){
-    comParser* comp = new comParser
-            ("ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz");
     
+    //Ending initialization
     
-    ASSERT_EQ(-1, comp->checkStart(0));
-    ASSERT_EQ(false, comp->checkTail(0));
+    //Somehow this is automatically appending the characters at the end? 
+    char end1ca[] = {(char)0xeb, (char)0x90, 'a','a','a','a',
+            (char)0x55, (char)0x55, (char)0x55, (char)0x55, 
+            (char)0x55,(char)0x55,(char)0x55,(char)0x55, 
+            (char)0xeb, (char)0x90, 'a','a','a','a',
+            (char)0x55, (char)0x55, (char)0x55, (char)0x55, 
+            (char)0x55,(char)0x55,(char)0x55,(char)0x55, 
+            (char)0xeb, (char)0x90, 'a','a','a','a',
+            (char)0x55, (char)0x55, (char)0x55, (char)0x55, 
+            (char)0x55,(char)0x55,(char)0x55,(char)0x55, 
+            (char)0xeb, (char)0x90, 'a','a','a','a',
+            (char)0x55, (char)0x55, (char)0x55, (char)0x55, 
+            (char)0x55,(char)0x55,(char)0x55,(char)0x55};
+    
+    std::string test(end1ca);
+    std::cout << test << std::endl;
+    comParser *testCom = new comParser(test);
+    testCom->parse();
+    testCom->printParserList();
+    //----------------------//
+
 }

@@ -29,7 +29,6 @@ int comParser::checkStart(int start){
         cout << "Head found at " << res << endl;
         return res;
     }
-    cout << "No head found" << endl;
     return res;
 }
 
@@ -53,6 +52,7 @@ bool comParser::checkTail(int start){
 }
 
 void comParser::getHeadPositions(){
+    headCount = 0;
     int currentPosition = 0;
     for(int i = 0; i < ogInput.length() - 1; i++){
         currentPosition = checkStart(i);
@@ -67,6 +67,7 @@ void comParser::getHeadPositions(){
 }
 
 void comParser::getTailPositions(){
+    tailCount = 0;
     for(int i = 0; i < ogInput.length() - 7; i++){
         if(checkTail(i)){
             tailPositions.push_back(i);
@@ -85,6 +86,26 @@ void comParser::parse(){
     if(headCount != tailCount){
         cout << "Head Count != Tail Count. Broken message? " << endl;
         return; 
+    }
+    for(int i = 0; i < headCount; i++){
+        int strLen = tailPositions[i] - headPositions[i] + 8;
+        parserList.push_back(ogInput.substr(headPositions[i], strLen));
+        
+        
+    }
+      
+}
+
+void comParser::printParserList(){
+    if(headCount != tailCount || parserList.size() == 0 || headCount == 0 ){
+        cout << "Parser List Empty!" << endl;
+        return;
+    }
+    else{
+        for(int i = 0; i < headCount; i++){
+            cout << "Index " << i << ": " << parserList[i] << 
+                endl << "   size: " << parserList[i].size() << endl;
+        }
     }
     
 }

@@ -21,6 +21,7 @@
 #define COM_PARSER_H
 #include <vector>
 #include <string>
+#include <iterator>
 
 class comParser{
 private:
@@ -31,19 +32,21 @@ private:
     int length;
     std::vector<std::string> parserList; 
     std::string ogInput;
-    void getHeadPositions();
-    void getTailPositions();
-    void parse();
 public:
     comParser();
     comParser(std::string);
     ~comParser();
-    int checkStart(int);
-    bool checkTail(int);
-    void setParserList(std::vector<std::string>);
+    int         checkStart(int);
+    bool        checkTail(int);
+    void        getHeadPositions();
+    void        getTailPositions();
+    void        setParserList(std::vector<std::string>);
     std::string toHex(std::string);
-    void printRawBytes(std::string);
+    void        printRawBytes(std::string);
+    void        parse();
     std::vector<std::string> getParserList();
+    void        printParserList();
+    
 };
 
 

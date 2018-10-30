@@ -56,7 +56,7 @@
             <linkerLibLibItem>gtest</linkerLibLibItem>
             <linkerLibLibItem>gtest_main</linkerLibLibItem>
           </linkerLibItems>
-          <commandLine>-lzmq -pthread -lgtest</commandLine>
+          <commandLine>-lzmq -pthread -lgtest -lboost_filesystem -lboost_program_options</commandLine>
         </linkerTool>
       </compileType>
       <item path="comParser.cpp" ex="false" tool="1" flavor2="0">
