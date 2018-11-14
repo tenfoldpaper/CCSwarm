@@ -6,15 +6,14 @@ msgHandler::msgHandler(){
 }
 
 msgHandler::msgHandler(int pNum_){
-    port_number = pNum_;
-    cout << "msgHandler bound to port " << port_number << " created. " << std::endl;
+    portNumber = pNum_;
+    cout << "msgHandler bound to port " << portNumber << " created. " << std::endl;
 }
 
 bool msgHandler::receiveMsg(string msg){
     if(!isEmpty()){
         setEmpty(true);
     }
-    
     
     msgQueue.push_back(msg);
     cout << msg << " " << msg.length() << endl;
@@ -23,6 +22,9 @@ bool msgHandler::receiveMsg(string msg){
 
 bool msgHandler::handleMsg(){
     cout << "Not yet implemented!" << endl;
+    //Push the message to the local database
+    
+    //Send the message to the SAT 
     
 }
 

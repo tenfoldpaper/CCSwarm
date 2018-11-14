@@ -11,8 +11,7 @@ class msgHandler {
 
 private:
     std::vector<std::string> msgQueue; 
-    
-    int port_number; //Specifies the port the msgHandler receives data from 
+    int portNumber; //Specifies the port the msgHandler receives data from 
     bool empty; 
 
 public:
@@ -27,8 +26,11 @@ public:
     bool handleMsg();//Goes through the entire queue, storing it into the database. 
 
     void printInfo();//Prints out the current status 
-
+    
+    int getPortNumber();
+    
     bool isEmpty();
+    
     void setEmpty(bool);
     
 };
