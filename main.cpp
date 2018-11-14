@@ -1,6 +1,6 @@
 #include "./headers/zhelpers.hpp"
 #include <iostream>
-#include "./headers/msgHandler.hpp"
+#include "./headers/msgHandler.h.hpp"
 #include "./headers/comParser.h"
 #include <boost/program_options.hpp>
 #include <stdexcept> 
@@ -13,18 +13,25 @@ int main(int argc, char* argv[]){
     cout << "Welcome to CCSwarm Hub." << endl;
     
     string ccs5SubIP, satPubIP, ccs5PubIP, satSubIP, extraPubIP;
+    string satPubHBIP, satSubHBIP; //Heartbeat IP addresses for the satellite 
+    
     int ccs5SubPort, satPubPort, ccs5PubPort, satSubPort, extraPubPort;
+    int satPubHBPort, satSubHBPort;
+    
     string portPrefix = "tcp://127.0.0.1:" ;
     bool success = false; 
     bool extraFlag = false;
+    
     try{
         
         po::options_description desc("Usage: ccswarm [option] ?[arg] ...");
         desc.add_options()
-            ("help", "Displays the help message")
+            ("help", "Displays this message.")
             ("ccs5sub", po::value<int>(), "Sets the port number for the socket subscribing to the CCS5's output. Default is 7770.")
             ("satpub", po::value<int>(), "Sets the port number for the socket publishing to the satellite's RX model. Default is 7771.")
+            ("satpubheart", po::value<int>(), "Sets the port number for the heartbeat node of the satellite's RX model. Default is 7781.")
             ("satsub", po::value<int>(), "Sets the port number for the socket subscribing to the satellite's TX model. Default is 7772.")
+            ("satsubheart", po::value<int>(), "Sets the port number for the heartbeat node of the satellite's TX model. Default is 7782.")
             ("ccs5pub", po::value<int>(), "Sets the port number for the socket publishing to the CCS5's input. Default is 7773.")
             ("extra", po::value<int>(), "Sets the port number for the socket that additional clients can subscribe to. Default is 8800.")
             ("extra-on", "Enables the extra port to which additional clients can subscribe in order to receive monitoring data.")
@@ -50,12 +57,13 @@ int main(int argc, char* argv[]){
             cout << "Port of the socket receiving data from CCS5 has been set to "
                  << ccs5SubPort << ".\n";
             ccs5SubIP = portPrefix + to_string(ccs5SubPort);
+             cout << "    IP: " << ccs5SubIP << "\n";
         }
         else{
             cout << "Port of the socket receiving data from CCS5 has been set to "
                  << "its default value of 7770.\n";
             ccs5SubIP = "tcp://127.0.0.1:7770";
-            cout << "IP: " << ccs5SubIP << "\n";
+            cout << "    IP: " << ccs5SubIP << "\n";
             ccs5SubPort = 7770;
         }
         
@@ -67,15 +75,35 @@ int main(int argc, char* argv[]){
             cout << "Port of the socket sending data to swarmFLP has been set to "
                  << satPubPort << ".\n";
             satPubIP = portPrefix + to_string(satPubPort);
+             cout << "    IP: " << ccs5PubIP << "\n";
         }
         else{
             cout << "Port of the socket sending data to swarmFLP has been set to "
                  << "its default value of 7771.\n";
             satPubIP = "tcp://127.0.0.1:7771";
-            cout << "IP: " << satPubIP << "\n";
+            cout << "    IP: " << satPubIP << "\n";
             satPubPort = 7771;
         }
+        //
+        if(vm.count("satpubheart")){
+            satPubHBPort = vm["satpubheart"].as<int>();
+            if(satPubHBPort > 65535 || satPubHBPort < 1){
+                throw(invalid_argument("invalid port number"));
+            }
+            cout << "Port of the heartbeat socket of RX has been set to "
+                 << satPubHBPort << ".\n";
+            satPubHBIP = portPrefix + to_string(satPubHBPort);
+             cout << "    IP: " << satPubHBIP << "\n";
+        }
+        else{
+            cout << "Port of the heartbeat socket of RX has been set to "
+                 << "its default value of 7781.\n";
+            satPubHBIP = "tcp://127.0.0.1:7781";
+            cout << "    IP: " << satPubHBIP << "\n";
+            satPubHBPort = 7781;
+        }
         
+        //
         if(vm.count("satsub")){
             satSubPort = vm["satsub"].as<int>();
             if(satSubPort > 65535 || satSubPort < 1){
@@ -84,13 +112,32 @@ int main(int argc, char* argv[]){
             cout << "Port of the socket receiving data from swarmFLP has been set to "
                  << satSubPort << ".\n";
             satSubIP = portPrefix + to_string(satSubPort);
+            cout << "    IP: " << satSubIP << "\n";
         }
         else{
             cout << "Port of the socket receiving data from swarmFLP has been set to "
                  << "its default value of 7772.\n";
             satSubIP = "tcp://127.0.0.1:7772";
-            cout << "IP: " << satSubIP << "\n";
+            cout << "    IP: " << satSubIP << "\n";
             satSubPort = 7772;
+        }
+        
+        if(vm.count("satsubheart")){
+            satSubHBPort = vm["satsubheart"].as<int>();
+            if(satSubHBPort > 65535 || satSubHBPort < 1){
+                throw(invalid_argument("invalid port number"));
+            }
+            cout << "Port of the heartbeat socket of TX has been set to "
+                 << satSubHBPort << ".\n";
+            satSubHBIP = portPrefix + to_string(satSubHBPort);
+            cout << "    IP: " << satSubHBIP << "\n";
+        }
+        else{
+            cout << "Port of the heartbeat socket of TX has been set to "
+                 << "its default value of 7782.\n";
+            satSubHBIP = "tcp://127.0.0.1:7782";
+            cout << "    IP: " << satSubHBIP << "\n";
+            satSubHBPort = 7782;
         }
         
         if(vm.count("ccs5pub")){
@@ -101,13 +148,14 @@ int main(int argc, char* argv[]){
             cout << "Port of the socket sending data to CCS5 has been set to "
                  << ccs5PubPort << ".\n";
             ccs5PubIP = portPrefix + to_string(ccs5PubPort);
+            cout << "    IP: " << ccs5PubIP << "\n";
             
         }
         else{
             cout << "Port of the socket sending data to CCS5 has been set to "
                  << "its default value of 7773.\n";
             ccs5PubIP = "tcp://127.0.0.1:7773";
-            cout << "IP: " << ccs5PubIP << "\n";
+            cout << "    IP: " << ccs5PubIP << "\n";
             ccs5PubPort = 7773;
         }
         if(extraFlag){
@@ -157,26 +205,43 @@ int main(int argc, char* argv[]){
     zmq::socket_t SAT_subscriber(context, ZMQ_SUB);
     SAT_subscriber.setsockopt(ZMQ_SUBSCRIBE, "", 0);
     
+    //Part that sends empty heartbeat messages back to the satellite. 
+    zmq::socket_t SAT_pubHeart(context, ZMQ_REP);
+    zmq::socket_t SAT_subHeart(context, ZMQ_REP);
+    
     //Part that enables additional clients to receive data. 
     if(extraFlag){
         zmq::socket_t observer_publisher(context, ZMQ_PUB);
     }
-    //Servers bind. Clients connect. 
-    //CCSwarm-related ports will always be 77xx. 
+    
     cout << "Handling binding and connecting " << endl;
     CCS5_subscriber.bind(ccs5SubIP);
-    cout << "check" << endl;
     SAT_publisher.bind(satPubIP);
+    SAT_pubHeart.bind(satPubHBIP);
+    SAT_subHeart.bind(satSubHBIP);
 
-    msgHandler *COMHandler = new msgHandler(ccs5SubPort); //Handles COM msg from CCS5
-    msgHandler *PayloadHandler = new msgHandler(satSubPort); //Handles Payload from SIM
+    msgHandler *COMHandler = new msgHandler(ccs5SubPort, 
+                                            satPubPort,
+                                            CCS5_subscriber, 
+                                            SAT_publisher,
+                                            SAT_pubHeart,
+                                            false); //Handles COM msg from CCS5
+    
+    msgHandler *PayloadHandler = new msgHandler(satSubPort,
+                                                ccsPubPort,
+                                                SAT_subscriber,
+                                                CCS5_publisher,
+                                                SAT_subHeart,
+                                                true
+                                                ); //Handles Payload from SIM
     
     std::cout << "Starting the loop" << endl;
     while(1){
         cout << "Listening to COM from CCS5..." << endl;
-        std::string header = s_recv(CCS5_subscriber);
-        std::string payload = s_recv(CCS5_subscriber);
-        std::cout << "COM Received" << endl;
+        string header = s_recv(CCS5_subscriber);
+        string payload = s_recv(CCS5_subscriber);
+        
+        cout << "COM Received" << endl;
         cout << "Payload:" << payload << " " << endl; 
         cout << "Handling the data... " << endl;
         COMHandler->receiveMsg(payload);
