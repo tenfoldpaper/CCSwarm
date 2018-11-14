@@ -45,7 +45,7 @@ bool msgHandler::insertMsg(string msg){
 bool msgHandler::handleMsg(){ //permanent loop meant to be run on its own thread
     //Could consider separating this, since the if/else loop is defined 
     //at start and only needs to be confirmed once. 
-    cout << "Not yet implemented!" << endl;
+    cout << "Needs testing! Like a lot!" << endl;
     string heartMsg;
     string msg;
     zmq::pollitem_t items[] = {
@@ -63,7 +63,12 @@ bool msgHandler::handleMsg(){ //permanent loop meant to be run on its own thread
             s_send(*toSocket, msg);
         }
         else{
+            //consider using the normal recv method. could be more robust. 
             heartMsg = s_recv(*heartSocket);
+            s_send(*heartSocket, "");
+            msg = s_recv(*fromSocket);
+            insertMsg(msg);
+            s_send(*toSocket, msg);
             //wait until we get a request from the TX. 
         }
         
