@@ -20,10 +20,14 @@ int main(int argc, char* argv[]){
     int ccs5SubPort, satPubPort, ccs5PubPort, satSubPort, extraPubPort;
     int satPubHBPort, satSubHBPort;
     
+    thread comThread, pldThread;
+    msgHandler* COMHandler;
+    msgHandler* PayloadHandler;
     //do we need multiple portprefixes? 
     string portPrefix;
     
     bool extraFlag = false;
+    bool comhandlerON = false, pldhandlerON = false;
     
     /* options */
     try{
@@ -226,77 +230,199 @@ int main(int argc, char* argv[]){
     }
     
     /* options */
-
+    
     zmq::context_t context(1);
     //Part that connects to CCS5.  
-    zmq::socket_t* CCS5_subscriber = new zmq::socket_t(context, ZMQ_STREAM);
-    zmq::socket_t* CCS5_publisher = new zmq::socket_t(context, ZMQ_STREAM);
+    zmq::socket_t* CCS5_subscriber;
+    zmq::socket_t* CCS5_publisher;
+    zmq::socket_t* SAT_publisher;
+    zmq::socket_t* SAT_subscriber;
+    zmq::socket_t* SAT_pubHeart;
+    zmq::socket_t* SAT_subHeart;
     
-    //Part that connects to swarmFLP.
-    zmq::socket_t* SAT_publisher = new zmq::socket_t(context, ZMQ_PUB);  
-    zmq::socket_t* SAT_subscriber = new zmq::socket_t(context, ZMQ_SUB);
-    SAT_subscriber->setsockopt(ZMQ_SUBSCRIBE, "", 0);
+    //lambdas
+    auto resetSockets = [&](){
+        CCS5_subscriber = new zmq::socket_t(context, ZMQ_STREAM);
+        CCS5_publisher = new zmq::socket_t(context, ZMQ_STREAM);
+
+        //Part that connects to swarmFLP.
+        SAT_publisher = new zmq::socket_t(context, ZMQ_PUB);  
+        SAT_subscriber = new zmq::socket_t(context, ZMQ_SUB);
+        SAT_subscriber->setsockopt(ZMQ_SUBSCRIBE, "", 0);
+
+        //Part that sends empty heartbeat messages back to the satellite. 
+        SAT_pubHeart = new zmq::socket_t(context, ZMQ_REQ);
+        SAT_pubHeart->setsockopt(ZMQ_RCVTIMEO, 500);
+        SAT_pubHeart->setsockopt(ZMQ_SNDTIMEO, 500);
+        SAT_subHeart = new zmq::socket_t(context, ZMQ_REP);
+        SAT_subHeart->setsockopt(ZMQ_RCVTIMEO, 500);
+        SAT_subHeart->setsockopt(ZMQ_SNDTIMEO, 500); //This socket should always be 
+                                                    //listening
+        
+        cout << "Handling binding and connecting " << endl;
+        CCS5_subscriber->bind(ccs5SubIP);
+        SAT_publisher->bind(satPubIP);
+        SAT_pubHeart->bind(satPubHBIP);
+        SAT_subHeart->bind(satSubHBIP);
+    };
+    auto setupHandlers = [&](){
+        COMHandler = new msgHandler(ccs5SubPort, 
+                                    satPubPort,
+                                    CCS5_subscriber, 
+                                    SAT_publisher,
+                                    SAT_pubHeart,
+                                    false); //Handles COM msg from CCS5
+
+        PayloadHandler = new msgHandler(satSubPort,
+                                        ccs5PubPort,
+                                        SAT_subscriber,
+                                        CCS5_publisher,
+                                        SAT_subHeart,
+                                        true); //Handles Payload from SIM
+    };
+    bool socketFlag = false;
+    auto closeSockets = [&](){
+        CCS5_subscriber->close();
+        SAT_publisher->close();
+        SAT_pubHeart->close();
+        SAT_subHeart->close();
+        socketFlag = true;
+    };
+    ////////////////
     
-    //Part that sends empty heartbeat messages back to the satellite. 
-    zmq::socket_t* SAT_pubHeart = new zmq::socket_t(context, ZMQ_REQ);
-    SAT_pubHeart->setsockopt(ZMQ_RCVTIMEO, 500);
-    zmq::socket_t* SAT_subHeart = new zmq::socket_t(context, ZMQ_REP);
-    SAT_pubHeart->setsockopt(ZMQ_RCVTIMEO, -1); //This socket should always be 
-                                                //listening
-    
+    resetSockets();
     //Part that enables additional clients to receive data. 
     if(extraFlag){
         zmq::socket_t* observer_publisher = new zmq::socket_t(context, ZMQ_PUB);
     }
     
-    cout << "Handling binding and connecting " << endl;
-    CCS5_subscriber->bind(ccs5SubIP);
-    SAT_publisher->bind(satPubIP);
-    SAT_pubHeart->bind(satPubHBIP);
-    SAT_subHeart->bind(satSubHBIP);
-
-    msgHandler *COMHandler = new msgHandler(ccs5SubPort, 
-                                            satPubPort,
-                                            CCS5_subscriber, 
-                                            SAT_publisher,
-                                            SAT_pubHeart,
-                                            false); //Handles COM msg from CCS5
     
-    msgHandler *PayloadHandler = new msgHandler(satSubPort,
-                                                ccs5PubPort,
-                                                SAT_subscriber,
-                                                CCS5_publisher,
-                                                SAT_subHeart,
-                                                true
-                                                ); //Handles Payload from SIM
-    
-    std::cout << "Starting the loop" << endl;
-    
+       
     while(1){
-        cout << "Listening to COM from CCS5..." << endl;
         
-        //Put these two into separate threads. 
-        
-        thread comThread(&msgHandler::handleMsgA, *COMHandler);
-        thread pldThread(&msgHandler::handleMsgB, *PayloadHandler);
-        
-        sleep(1);
-        COMHandler->printInfo();
-        PayloadHandler->printInfo();
-        //Start a new thread, and:
-        //      1. Parse the message 
-        //      2. Put the message to a queue 
-        //      3. Create a bit vector to indicate pub successes
-        //      4. Send the message; if 1, flip bit; else retry til timeout
-        //      5. Repeat 4 for all the commands
-        //      6. Print bit state and kill the thread  
-        //Handle the data for storing to the database  
-        //      1. Store the COM + publishing success together to the RelDB
-        //
-        comThread.join();
-        pldThread.join();
-        
-        sleep(1);
+        string userinput;
+        cout << "Type in a command: ";
+        getline(cin, userinput);
+        if(userinput == "start"){
+            if(comhandlerON && pldhandlerON){
+                cout << "Handlers are already working; cannot start." << endl;
+            }
+            else{
+                if(socketFlag == true){
+                    resetSockets();
+                }
+                comhandlerON = true;
+                pldhandlerON = true;
+                setupHandlers();
+                comThread = thread(&msgHandler::handleMsgA, *COMHandler);
+                pldThread = thread(&msgHandler::handleMsgB, *PayloadHandler);
+                cout << "Started threads " << endl;
+            }
+        }
+        else if(userinput == "terminate"){
+            if(comhandlerON && pldhandlerON){
+                COMHandler->setWhileFlag(false);
+                PayloadHandler->setWhileFlag(false);
+                if(comThread.joinable()){
+                    comThread.join();
+                }
+                if(pldThread.joinable()){
+                    pldThread.join();
+                }
+                delete COMHandler;
+                delete PayloadHandler;
+                closeSockets();
+                comhandlerON = pldhandlerON = false;
+            }
+            else{
+                cout << "Nothing to terminate!" << endl;
+            }
+        }
+        else if(userinput == "forcerestart"){
+            if(pldhandlerON && comhandlerON){
+            
+                COMHandler->setWhileFlag(false);
+                PayloadHandler->setWhileFlag(false);
+                if(comThread.joinable()){
+                    comThread.join();
+                }
+                if(pldThread.joinable()){
+                    pldThread.join();
+                }
+                delete COMHandler;
+                delete PayloadHandler;
+                closeSockets();
+
+                resetSockets();
+                setupHandlers();
+                comThread = thread(&msgHandler::handleMsgA, *COMHandler);
+                pldThread = thread(&msgHandler::handleMsgB, *PayloadHandler);
+                cout << "Restarted threads " << endl;
+                
+            }
+            else{
+                resetSockets();
+                setupHandlers();
+                comThread = thread(&msgHandler::handleMsgA, *COMHandler);
+                pldThread = thread(&msgHandler::handleMsgB, *PayloadHandler);
+                cout << "Restarted threads " << endl;
+                pldhandlerON = comhandlerON = true;
+            }
+            
+        }
+        else if(userinput == "info"){
+            if(comhandlerON && pldhandlerON){
+                COMHandler->printInfo();
+                PayloadHandler->printInfo();
+            }
+            else{
+                cout << "Handlers are not initialized." << endl;
+            }
+        }
+        else if(userinput == "join"){
+            if(comhandlerON && pldhandlerON){    
+                COMHandler->setWhileFlag(false);
+                PayloadHandler->setWhileFlag(false);
+                comThread.join();
+                pldThread.join();
+                cout << "Joined the threads" << endl;
+            }
+            else{
+                cout << "Nothing to join!" << endl;
+            }
+        }
+        else if(userinput == "quit"){
+            if(comhandlerON && pldhandlerON){
+                COMHandler->setWhileFlag(false);
+                PayloadHandler->setWhileFlag(false);
+                if(comThread.joinable()){
+                    comThread.join();
+                }
+                if(pldThread.joinable()){
+                    pldThread.join();
+                }
+                delete COMHandler;
+                delete PayloadHandler;
+                comhandlerON = pldhandlerON = false;
+                cout << "Goodbye" << endl;
+                return 0;
+                
+            }
+            else{
+                cout << "Goodbye" << endl;
+                return 0;
+                
+            }
+        }
+        else{
+            cout << "Invalid command. Available commands: \n"
+                 << "start          Starts the threads.\n"
+                 << "terminate      Terminates all threads.\n"
+                 << "forcerestart   Terminates then starts the threads.\n"
+                 << "info           Prints info about the handlers.\n"
+                 << "join           Joins the threads. May hang indefinitely.\n"
+                 << endl;
+        }
     }
     return 0;
 }
