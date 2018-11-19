@@ -20,6 +20,7 @@ int main(int argc, char* argv[]){
     int ccs5SubPort, satPubPort, ccs5PubPort, satSubPort, extraPubPort;
     int satPubHBPort, satSubHBPort;
     
+    //do we need multiple portprefixes? 
     string portPrefix;
     
     bool extraFlag = false;
@@ -30,7 +31,7 @@ int main(int argc, char* argv[]){
         po::options_description desc("Usage: ccswarm [option] ?[arg] ...");
         desc.add_options()
             ("help", "Displays this message.")
-            ("ip", po::value<string>(), "Sets the IP address. Argument needs to be in ZMQ format, or else the program will fail. e.g. \"tcp://127.0.0.1\"")
+            ("ip", po::value<string>(), "Sets the IP address. Protocol needs to be ZMQ-compliant (tcp, inproc, ipc, pgm, epgm), or else the program will fail. e.g. \"tcp://127.0.0.1\"")
             ("ccs5sub", po::value<int>(), "Sets the port number for the socket subscribing to the CCS5's output. Default is 7770.")
             ("satpub", po::value<int>(), "Sets the port number for the socket publishing to the satellite's RX model. Default is 7771.")
             ("satpubheart", po::value<int>(), "Sets the port number for the heartbeat node of the satellite's RX model. Default is 7781.")
@@ -51,8 +52,16 @@ int main(int argc, char* argv[]){
             return 0;
         }
         if(vm.count("ip")){
+            
             portPrefix = vm["ip"].as<string>() + ":";
-            cout << "IP address has been set to " << portPrefix << endl;
+            if(portPrefix.find("tcp") != string::npos || 
+                    portPrefix.find("inproc") != string::npos
+                    || portPrefix.find("ipc") != string::npos
+                    || portPrefix.find("pgm") != string::npos
+                    || portPrefix.find("epgm") != string::npos){
+                cout << "IP address has been set to " << portPrefix << endl;
+            }
+            else throw(invalid_argument("Invalid ZMQ protocol provided"));
         }
         else{
             portPrefix = "tcp://127.0.0.1:";
@@ -67,7 +76,7 @@ int main(int argc, char* argv[]){
         if(vm.count("ccs5sub")){
             ccs5SubPort = vm["ccs5sub"].as<int>();
             if(ccs5SubPort > 65535 || ccs5SubPort < 1){
-                throw(invalid_argument("invalid port number"));
+                throw(out_of_range("invalid port number"));
             }
             cout << "Port of the socket receiving data from CCS5 has been set to "
                  << ccs5SubPort << ".\n";
@@ -85,7 +94,7 @@ int main(int argc, char* argv[]){
         if(vm.count("satpub")){
             satPubPort = vm["satpub"].as<int>();
             if(satPubPort > 65535 || satPubPort < 1){
-                throw(invalid_argument("invalid port number"));
+                throw(out_of_range("invalid port number"));
             }
             cout << "Port of the socket sending data to swarmFLP has been set to "
                  << satPubPort << ".\n";
@@ -103,7 +112,7 @@ int main(int argc, char* argv[]){
         if(vm.count("satpubheart")){
             satPubHBPort = vm["satpubheart"].as<int>();
             if(satPubHBPort > 65535 || satPubHBPort < 1){
-                throw(invalid_argument("invalid port number"));
+                throw(out_of_range("invalid port number"));
             }
             cout << "Port of the heartbeat socket of RX has been set to "
                  << satPubHBPort << ".\n";
@@ -122,7 +131,7 @@ int main(int argc, char* argv[]){
         if(vm.count("satsub")){
             satSubPort = vm["satsub"].as<int>();
             if(satSubPort > 65535 || satSubPort < 1){
-                throw(invalid_argument("invalid port number"));
+                throw(out_of_range("invalid port number"));
             }
             cout << "Port of the socket receiving data from swarmFLP has been set to "
                  << satSubPort << ".\n";
@@ -140,7 +149,7 @@ int main(int argc, char* argv[]){
         if(vm.count("satsubheart")){
             satSubHBPort = vm["satsubheart"].as<int>();
             if(satSubHBPort > 65535 || satSubHBPort < 1){
-                throw(invalid_argument("invalid port number"));
+                throw(out_of_range("invalid port number"));
             }
             cout << "Port of the heartbeat socket of TX has been set to "
                  << satSubHBPort << ".\n";
@@ -158,7 +167,7 @@ int main(int argc, char* argv[]){
         if(vm.count("ccs5pub")){
             ccs5PubPort = vm["ccs5pub"].as<int>();
             if(ccs5PubPort > 65535 || ccs5PubPort < 1){
-                throw(invalid_argument("invalid port number"));
+                throw(out_of_range("invalid port number"));
             }
             cout << "Port of the socket sending data to CCS5 has been set to "
                  << ccs5PubPort << ".\n";
@@ -177,7 +186,7 @@ int main(int argc, char* argv[]){
             if(vm.count("extra")){
                 extraPubPort = vm["extra"].as<int>();
                 if(extraPubPort > 65535 || extraPubPort < 1){
-                    throw(invalid_argument("invalid port number"));
+                    throw(out_of_range("invalid port number"));
                 }
                 cout << "Port of the extra socket sending data has been set to "
                      << extraPubPort << ".\n";
@@ -193,9 +202,15 @@ int main(int argc, char* argv[]){
             }
         }
     }
-    catch(const invalid_argument& e){
+    catch(const out_of_range& e){
         cerr << "error: Port number too large\n";
         return 2;
+    }
+    
+    catch(const invalid_argument& e){
+        cerr << "error: Invalid ZMQ protocol provided\n";
+        cout << "Refer to the --help option." << endl;
+        return 3;
     }
     
     catch(exception& e){
