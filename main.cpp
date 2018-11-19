@@ -1,9 +1,11 @@
-#include "./headers/zhelpers.hpp"
+
+#include <zhelpers.hpp>
 #include <iostream>
-#include "./headers/msgHandler.h.hpp"
+#include "./headers/msgHandler.hpp"
 #include "./headers/comParser.h"
 #include <boost/program_options.hpp>
 #include <stdexcept> 
+#include <thread>
 
 namespace po = boost::program_options;
 using namespace std;
@@ -22,6 +24,7 @@ int main(int argc, char* argv[]){
     bool success = false; 
     bool extraFlag = false;
     
+    /* options */
     try{
         
         po::options_description desc("Usage: ccswarm [option] ?[arg] ...");
@@ -194,31 +197,36 @@ int main(int argc, char* argv[]){
         cout << "Refer to the --help option." << "\n";
         return -1;
     }
+    
+    /* options */
 
     zmq::context_t context(1);
     //Part that connects to CCS5.  
-    zmq::socket_t CCS5_subscriber(context, ZMQ_STREAM);
-    zmq::socket_t CCS5_publisher(context, ZMQ_STREAM);
+    zmq::socket_t* CCS5_subscriber = new zmq::socket_t(context, ZMQ_STREAM);
+    zmq::socket_t* CCS5_publisher = new zmq::socket_t(context, ZMQ_STREAM);
     
     //Part that connects to swarmFLP.
-    zmq::socket_t SAT_publisher(context, ZMQ_PUB);  
-    zmq::socket_t SAT_subscriber(context, ZMQ_SUB);
-    SAT_subscriber.setsockopt(ZMQ_SUBSCRIBE, "", 0);
+    zmq::socket_t* SAT_publisher = new zmq::socket_t(context, ZMQ_PUB);  
+    zmq::socket_t* SAT_subscriber = new zmq::socket_t(context, ZMQ_SUB);
+    SAT_subscriber->setsockopt(ZMQ_SUBSCRIBE, "", 0);
     
     //Part that sends empty heartbeat messages back to the satellite. 
-    zmq::socket_t SAT_pubHeart(context, ZMQ_REP);
-    zmq::socket_t SAT_subHeart(context, ZMQ_REP);
+    zmq::socket_t* SAT_pubHeart = new zmq::socket_t(context, ZMQ_REQ);
+    SAT_pubHeart->setsockopt(ZMQ_RCVTIMEO, 500);
+    zmq::socket_t* SAT_subHeart = new zmq::socket_t(context, ZMQ_REP);
+    SAT_pubHeart->setsockopt(ZMQ_RCVTIMEO, -1); //This socket should always be 
+                                                //listening
     
     //Part that enables additional clients to receive data. 
     if(extraFlag){
-        zmq::socket_t observer_publisher(context, ZMQ_PUB);
+        zmq::socket_t* observer_publisher = new zmq::socket_t(context, ZMQ_PUB);
     }
     
     cout << "Handling binding and connecting " << endl;
-    CCS5_subscriber.bind(ccs5SubIP);
-    SAT_publisher.bind(satPubIP);
-    SAT_pubHeart.bind(satPubHBIP);
-    SAT_subHeart.bind(satSubHBIP);
+    CCS5_subscriber->bind(ccs5SubIP);
+    SAT_publisher->bind(satPubIP);
+    SAT_pubHeart->bind(satPubHBIP);
+    SAT_subHeart->bind(satSubHBIP);
 
     msgHandler *COMHandler = new msgHandler(ccs5SubPort, 
                                             satPubPort,
@@ -228,7 +236,7 @@ int main(int argc, char* argv[]){
                                             false); //Handles COM msg from CCS5
     
     msgHandler *PayloadHandler = new msgHandler(satSubPort,
-                                                ccsPubPort,
+                                                ccs5PubPort,
                                                 SAT_subscriber,
                                                 CCS5_publisher,
                                                 SAT_subHeart,
@@ -236,15 +244,18 @@ int main(int argc, char* argv[]){
                                                 ); //Handles Payload from SIM
     
     std::cout << "Starting the loop" << endl;
+    
     while(1){
         cout << "Listening to COM from CCS5..." << endl;
-        string header = s_recv(CCS5_subscriber);
-        string payload = s_recv(CCS5_subscriber);
         
-        cout << "COM Received" << endl;
-        cout << "Payload:" << payload << " " << endl; 
-        cout << "Handling the data... " << endl;
-        COMHandler->receiveMsg(payload);
+        //Put these two into separate threads. 
+        
+        thread comThread(&msgHandler::handleMsgA, *COMHandler);
+        thread pldThread(&msgHandler::handleMsgB, *PayloadHandler);
+        
+        sleep(1);
+        COMHandler->printInfo();
+        PayloadHandler->printInfo();
         //Start a new thread, and:
         //      1. Parse the message 
         //      2. Put the message to a queue 
@@ -255,17 +266,8 @@ int main(int argc, char* argv[]){
         //Handle the data for storing to the database  
         //      1. Store the COM + publishing success together to the RelDB
         //
-        int plLen = payload.length();
-        zmq::message_t toSatRXPayload(plLen);
-        memcpy((void*)toSatRXPayload.data(), payload.c_str(), plLen);
-        
-        while(!success){//Is retrying until success a good strategy here? 
-            success = SAT_publisher.send(toSatRXPayload);
-            if(!success){
-                cout << "Publishing the data to SAT was not successful. Retrying..." << endl;
-                sleep(1); //Don't overload the computer with infinite attempts
-            }
-        }
+        comThread.join();
+        pldThread.join();
         
         sleep(1);
     }

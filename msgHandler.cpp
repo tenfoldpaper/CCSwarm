@@ -14,9 +14,9 @@ msgHandler::msgHandler(){
 
 msgHandler::msgHandler(int from_, 
                        int to_, 
-                       zmq::socket_t fromS_, 
-                       zmq::socket_t toS_,
-                       zmq::socket_t hb_, 
+                       zmq::socket_t* fromS_, 
+                       zmq::socket_t* toS_,
+                       zmq::socket_t* hb_, 
                        bool d_){
     
     fromPort = from_;
@@ -27,14 +27,17 @@ msgHandler::msgHandler(int from_,
     toSocket = toS_; 
     cout << "Handler will handle data coming from port " << fromPort << 
             "to " << toPort << endl;
-    
-    
+        
+}
+
+msgHandler::~msgHandler(){
+    cout << "Destroying the msgHandler" << endl;
 }
 
 
 bool msgHandler::insertMsg(string msg){
-    if(!isEmpty()){
-        setEmpty(true);
+    if(isEmpty()){
+        setEmpty(false);
     }
     
     msgQueue.push_back(msg); //replace this with inserting the data to SQLite 
@@ -42,45 +45,62 @@ bool msgHandler::insertMsg(string msg){
     return true; 
 }
 
-bool msgHandler::handleMsg(){ //permanent loop meant to be run on its own thread
+//Add error handling to this 
+bool msgHandler::handleMsgA(){ //permanent loop meant to be run on its own thread
     //Could consider separating this, since the if/else loop is defined 
     //at start and only needs to be confirmed once. 
     cout << "Needs testing! Like a lot!" << endl;
     string heartMsg;
     string msg;
+    bool sendSuccess = false;
     zmq::pollitem_t items[] = {
-        {*fromSocket, 0, ZMQ_POLLIN, 0}, 
-        {*heartSocket, 0, ZMQ_POLLIN, 0}
+        {static_cast<void*>(*fromSocket), 0, ZMQ_POLLIN, 0}, 
+        {static_cast<void*>(*heartSocket), 0, ZMQ_POLLIN, 0}
     };
     while(1){
-        if(!direction){ //going twd. ccs 
-            s_send(*heartSocket, "");
-            //wait until receive is done; otherwise terminate
-            heartMsg = s_recv(*heartSocket);
-            //Set the RX code so that after getting HB, wait a sec. 
-            msg = s_recv(*fromSocket); 
-            insertMsg(msg);
-            s_send(*toSocket, msg);
-        }
-        else{
-            //consider using the normal recv method. could be more robust. 
-            heartMsg = s_recv(*heartSocket);
-            s_send(*heartSocket, "");
-            msg = s_recv(*fromSocket);
-            insertMsg(msg);
-            s_send(*toSocket, msg);
-            //wait until we get a request from the TX. 
-        }
-        
-        
-        
-    }
-    
-    
+        cout << "Checking if the heart is alive at " << toPort + 1 << endl;
+        s_send(*heartSocket, "");
+        //wait until receive is done; otherwise terminate
+        heartMsg = s_recv(*heartSocket);
+        //Set the RX code so that after getting HB, wait a sec. 
+        msg = s_recv(*fromSocket); 
+        insertMsg(msg);
+        s_send(*toSocket, msg);
+        cout << "Pushing the message to a database" << endl;
+    } 
     //Push the message to the local database
      
     return false;
 }
+
+bool msgHandler::handleMsgB(){ //permanent loop meant to be run on its own thread
+    //Could consider separating this, since the if/else loop is defined 
+    //at start and only needs to be confirmed once. 
+    cout << "Needs testing! Like a lot!" << endl;
+    string heartMsg;
+    string msg;
+    bool sendSuccess = false;
+    zmq::pollitem_t items[] = {
+        {static_cast<void*>(*fromSocket), 0, ZMQ_POLLIN, 0}, 
+        {static_cast<void*>(*heartSocket), 0, ZMQ_POLLIN, 0}
+    };
+    while(1){
+        
+        cout << "Listening for a heartbeat at " << fromPort + 1 << endl;
+        //consider using the normal recv method. could be more robust. 
+        heartMsg = s_recv(*heartSocket);
+        s_send(*heartSocket, "");
+        msg = s_recv(*fromSocket);
+        insertMsg(msg);
+        s_send(*toSocket, msg);
+        //wait until we get a request from the TX. 
+        cout << "Pushing the message to a database" << endl;
+    } 
+    //Push the message to the local database
+     
+    return false;
+}
+   
 
 void msgHandler::printInfo(){
     cout << "Message handler info: \n"

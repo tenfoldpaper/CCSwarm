@@ -77,17 +77,17 @@ ${CND_DISTDIR}/${CND_CONF}/${CND_PLATFORM}/ccswarm: ${OBJECTFILES}
 ${OBJECTDIR}/comParser.o: comParser.cpp
 	${MKDIR} -p ${OBJECTDIR}
 	${RM} "$@.d"
-	$(COMPILE.cc) -g -MMD -MP -MF "$@.d" -o ${OBJECTDIR}/comParser.o comParser.cpp
+	$(COMPILE.cc) -g -Iheaders -MMD -MP -MF "$@.d" -o ${OBJECTDIR}/comParser.o comParser.cpp
 
 ${OBJECTDIR}/main.o: main.cpp
 	${MKDIR} -p ${OBJECTDIR}
 	${RM} "$@.d"
-	$(COMPILE.cc) -g -MMD -MP -MF "$@.d" -o ${OBJECTDIR}/main.o main.cpp
+	$(COMPILE.cc) -g -Iheaders -MMD -MP -MF "$@.d" -o ${OBJECTDIR}/main.o main.cpp
 
 ${OBJECTDIR}/msgHandler.o: msgHandler.cpp
 	${MKDIR} -p ${OBJECTDIR}
 	${RM} "$@.d"
-	$(COMPILE.cc) -g -MMD -MP -MF "$@.d" -o ${OBJECTDIR}/msgHandler.o msgHandler.cpp
+	$(COMPILE.cc) -g -Iheaders -MMD -MP -MF "$@.d" -o ${OBJECTDIR}/msgHandler.o msgHandler.cpp
 
 # Subprojects
 .build-subprojects:
@@ -104,7 +104,7 @@ ${TESTDIR}/TestFiles/f1: ${TESTDIR}/headers/parserTest.o ${OBJECTFILES:%.o=%_nom
 ${TESTDIR}/headers/parserTest.o: headers/parserTest.cpp 
 	${MKDIR} -p ${TESTDIR}/headers
 	${RM} "$@.d"
-	$(COMPILE.cc) -g -I. -MMD -MP -MF "$@.d" -o ${TESTDIR}/headers/parserTest.o headers/parserTest.cpp
+	$(COMPILE.cc) -g -Iheaders -I. -MMD -MP -MF "$@.d" -o ${TESTDIR}/headers/parserTest.o headers/parserTest.cpp
 
 
 ${OBJECTDIR}/comParser_nomain.o: ${OBJECTDIR}/comParser.o comParser.cpp 
@@ -115,7 +115,7 @@ ${OBJECTDIR}/comParser_nomain.o: ${OBJECTDIR}/comParser.o comParser.cpp
 	   (echo "$$NMOUTPUT" | ${GREP} 'T _main$$'); \
 	then  \
 	    ${RM} "$@.d";\
-	    $(COMPILE.cc) -g -Dmain=__nomain -MMD -MP -MF "$@.d" -o ${OBJECTDIR}/comParser_nomain.o comParser.cpp;\
+	    $(COMPILE.cc) -g -Iheaders -Dmain=__nomain -MMD -MP -MF "$@.d" -o ${OBJECTDIR}/comParser_nomain.o comParser.cpp;\
 	else  \
 	    ${CP} ${OBJECTDIR}/comParser.o ${OBJECTDIR}/comParser_nomain.o;\
 	fi
@@ -128,7 +128,7 @@ ${OBJECTDIR}/main_nomain.o: ${OBJECTDIR}/main.o main.cpp
 	   (echo "$$NMOUTPUT" | ${GREP} 'T _main$$'); \
 	then  \
 	    ${RM} "$@.d";\
-	    $(COMPILE.cc) -g -Dmain=__nomain -MMD -MP -MF "$@.d" -o ${OBJECTDIR}/main_nomain.o main.cpp;\
+	    $(COMPILE.cc) -g -Iheaders -Dmain=__nomain -MMD -MP -MF "$@.d" -o ${OBJECTDIR}/main_nomain.o main.cpp;\
 	else  \
 	    ${CP} ${OBJECTDIR}/main.o ${OBJECTDIR}/main_nomain.o;\
 	fi
@@ -141,7 +141,7 @@ ${OBJECTDIR}/msgHandler_nomain.o: ${OBJECTDIR}/msgHandler.o msgHandler.cpp
 	   (echo "$$NMOUTPUT" | ${GREP} 'T _main$$'); \
 	then  \
 	    ${RM} "$@.d";\
-	    $(COMPILE.cc) -g -Dmain=__nomain -MMD -MP -MF "$@.d" -o ${OBJECTDIR}/msgHandler_nomain.o msgHandler.cpp;\
+	    $(COMPILE.cc) -g -Iheaders -Dmain=__nomain -MMD -MP -MF "$@.d" -o ${OBJECTDIR}/msgHandler_nomain.o msgHandler.cpp;\
 	else  \
 	    ${CP} ${OBJECTDIR}/msgHandler.o ${OBJECTDIR}/msgHandler_nomain.o;\
 	fi

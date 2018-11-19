@@ -15,7 +15,7 @@
 #include <stdio.h>
 #include <string>
 #include <zmq.hpp>
-#include "./headers/zhelpers.hpp"
+#include "./zhelpers.hpp"
 
 class msgHandler {
 
@@ -32,17 +32,19 @@ private:
 public:
     msgHandler();
 
-    msgHandler(int, zmq::socket_t*, zmq::socket_t*, zmq::socket_t*);
+    msgHandler(int, int, zmq::socket_t*, zmq::socket_t*, zmq::socket_t*, bool);
 
     ~msgHandler();
     
     bool insertMsg(std::string);//Pushes the msg in the arg to SQLite db 
     
-    bool handleMsg();//Goes through the entire queue, storing it into the database. 
-
-    void printInfo();//Prints out the current status 
+    //For direction: publishing to satellite 
+    bool handleMsgA();//Goes through the entire queue, storing it into the database. 
     
-    int getPortNumber();
+    //For direction: subscribing to satellite 
+    bool handleMsgB(); //For direction == 1;
+    
+    void printInfo();//Prints out the current status 
     
     bool isEmpty();
     
