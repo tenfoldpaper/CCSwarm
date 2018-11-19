@@ -253,10 +253,12 @@ int main(int argc, char* argv[]){
 
         //Part that sends empty heartbeat messages back to the satellite. 
         SAT_pubHeart = new zmq::socket_t(context, ZMQ_REQ);
-        SAT_pubHeart->setsockopt(ZMQ_RCVTIMEO, 500);
-        SAT_pubHeart->setsockopt(ZMQ_SNDTIMEO, 500);
+        //The timeout values should be calibrated to reflect the 
+        //server nature of this program. 
+        SAT_pubHeart->setsockopt(ZMQ_RCVTIMEO, 500); 
+        SAT_pubHeart->setsockopt(ZMQ_SNDTIMEO, -1); /**/
         SAT_subHeart = new zmq::socket_t(context, ZMQ_REP);
-        SAT_subHeart->setsockopt(ZMQ_RCVTIMEO, 500);
+        SAT_subHeart->setsockopt(ZMQ_RCVTIMEO, -1); /**/ 
         SAT_subHeart->setsockopt(ZMQ_SNDTIMEO, 500); //This socket should always be 
                                                     //listening
         
@@ -393,6 +395,7 @@ int main(int argc, char* argv[]){
                 }
                 delete COMHandler;
                 delete PayloadHandler;
+                closeSockets();
                 comhandlerON = pldhandlerON = false;
                 cout << "Goodbye" << endl;
                 return 0;
