@@ -28,6 +28,7 @@ private:
     zmq::socket_t* heartSocket;
     zmq::socket_t* toSocket; 
     bool direction; //0: to Sat; 1: to CCS
+    bool whileFlag;
 
 public:
     msgHandler();
@@ -49,6 +50,8 @@ public:
     bool isEmpty();
     
     void setEmpty(bool);
+    
+    void setWhileFlag(bool);
     
 };
 

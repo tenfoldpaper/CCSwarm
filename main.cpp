@@ -241,7 +241,8 @@ int main(int argc, char* argv[]){
     zmq::socket_t* SAT_subHeart;
     
     //lambdas
-    auto resetSockets = [&](){
+    auto setupSockets = [&](){ //Set up the socket pointers from scratch;
+                               //Sockets must be destroyed before invoking this.
         CCS5_subscriber = new zmq::socket_t(context, ZMQ_STREAM);
         CCS5_publisher = new zmq::socket_t(context, ZMQ_STREAM);
 
@@ -265,7 +266,7 @@ int main(int argc, char* argv[]){
         SAT_pubHeart->bind(satPubHBIP);
         SAT_subHeart->bind(satSubHBIP);
     };
-    auto setupHandlers = [&](){
+    auto setupHandlers = [&](){ //Init the handlers with the sockets.
         COMHandler = new msgHandler(ccs5SubPort, 
                                     satPubPort,
                                     CCS5_subscriber, 
@@ -281,7 +282,8 @@ int main(int argc, char* argv[]){
                                         true); //Handles Payload from SIM
     };
     bool socketFlag = false;
-    auto closeSockets = [&](){
+    auto closeSockets = [&](){ //Closes the sockets. Should be run 
+                                //before setupSockets.
         CCS5_subscriber->close();
         SAT_publisher->close();
         SAT_pubHeart->close();
@@ -290,8 +292,9 @@ int main(int argc, char* argv[]){
     };
     ////////////////
     
-    resetSockets();
+    setupSockets();
     //Part that enables additional clients to receive data. 
+    // TODO: Implement this function. Maybe vectorize the handlers? 
     if(extraFlag){
         zmq::socket_t* observer_publisher = new zmq::socket_t(context, ZMQ_PUB);
     }
@@ -309,7 +312,7 @@ int main(int argc, char* argv[]){
             }
             else{
                 if(socketFlag == true){
-                    resetSockets();
+                    setupSockets();
                 }
                 comhandlerON = true;
                 pldhandlerON = true;
@@ -352,8 +355,7 @@ int main(int argc, char* argv[]){
                 delete COMHandler;
                 delete PayloadHandler;
                 closeSockets();
-
-                resetSockets();
+                setupSockets();
                 setupHandlers();
                 comThread = thread(&msgHandler::handleMsgA, *COMHandler);
                 pldThread = thread(&msgHandler::handleMsgB, *PayloadHandler);
@@ -361,7 +363,7 @@ int main(int argc, char* argv[]){
                 
             }
             else{
-                resetSockets();
+                setupSockets();
                 setupHandlers();
                 comThread = thread(&msgHandler::handleMsgA, *COMHandler);
                 pldThread = thread(&msgHandler::handleMsgB, *PayloadHandler);
@@ -377,18 +379,6 @@ int main(int argc, char* argv[]){
             }
             else{
                 cout << "Handlers are not initialized." << endl;
-            }
-        }
-        else if(userinput == "join"){
-            if(comhandlerON && pldhandlerON){    
-                COMHandler->setWhileFlag(false);
-                PayloadHandler->setWhileFlag(false);
-                comThread.join();
-                pldThread.join();
-                cout << "Joined the threads" << endl;
-            }
-            else{
-                cout << "Nothing to join!" << endl;
             }
         }
         else if(userinput == "quit"){
@@ -420,7 +410,7 @@ int main(int argc, char* argv[]){
                  << "terminate      Terminates all threads.\n"
                  << "forcerestart   Terminates then starts the threads.\n"
                  << "info           Prints info about the handlers.\n"
-                 << "join           Joins the threads. May hang indefinitely.\n"
+                 << "quit           Terminates the threads then returns 0."
                  << endl;
         }
     }
