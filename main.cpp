@@ -20,8 +20,8 @@ int main(int argc, char* argv[]){
     int ccs5SubPort, satPubPort, ccs5PubPort, satSubPort, extraPubPort;
     int satPubHBPort, satSubHBPort;
     
-    string portPrefix = "tcp://127.0.0.1:" ;
-    bool success = false; 
+    string portPrefix;
+    
     bool extraFlag = false;
     
     /* options */
@@ -30,6 +30,7 @@ int main(int argc, char* argv[]){
         po::options_description desc("Usage: ccswarm [option] ?[arg] ...");
         desc.add_options()
             ("help", "Displays this message.")
+            ("ip", po::value<string>(), "Sets the IP address. Argument needs to be in ZMQ format, or else the program will fail. e.g. \"tcp://127.0.0.1\"")
             ("ccs5sub", po::value<int>(), "Sets the port number for the socket subscribing to the CCS5's output. Default is 7770.")
             ("satpub", po::value<int>(), "Sets the port number for the socket publishing to the satellite's RX model. Default is 7771.")
             ("satpubheart", po::value<int>(), "Sets the port number for the heartbeat node of the satellite's RX model. Default is 7781.")
@@ -38,6 +39,7 @@ int main(int argc, char* argv[]){
             ("ccs5pub", po::value<int>(), "Sets the port number for the socket publishing to the CCS5's input. Default is 7773.")
             ("extra", po::value<int>(), "Sets the port number for the socket that additional clients can subscribe to. Default is 8800.")
             ("extra-on", "Enables the extra port to which additional clients can subscribe in order to receive monitoring data.")
+        
         ;
         
         po::variables_map vm;
@@ -47,6 +49,16 @@ int main(int argc, char* argv[]){
         if(vm.count("help")){
             cout << desc << "\n";
             return 0;
+        }
+        if(vm.count("ip")){
+            portPrefix = vm["ip"].as<string>() + ":";
+            cout << "IP address has been set to " << portPrefix << endl;
+        }
+        else{
+            portPrefix = "tcp://127.0.0.1:";
+            cout << "IP address has been set to the default value of " <<
+                    portPrefix << endl;
+            
         }
         if(vm.count("extra-on")){
             extraFlag = true;
@@ -65,7 +77,7 @@ int main(int argc, char* argv[]){
         else{
             cout << "Port of the socket receiving data from CCS5 has been set to "
                  << "its default value of 7770.\n";
-            ccs5SubIP = "tcp://127.0.0.1:7770";
+            ccs5SubIP = portPrefix + "7770";
             cout << "    IP: " << ccs5SubIP << "\n";
             ccs5SubPort = 7770;
         }
@@ -83,7 +95,7 @@ int main(int argc, char* argv[]){
         else{
             cout << "Port of the socket sending data to swarmFLP has been set to "
                  << "its default value of 7771.\n";
-            satPubIP = "tcp://127.0.0.1:7771";
+            satPubIP = portPrefix + "7771";
             cout << "    IP: " << satPubIP << "\n";
             satPubPort = 7771;
         }
@@ -101,7 +113,7 @@ int main(int argc, char* argv[]){
         else{
             cout << "Port of the heartbeat socket of RX has been set to "
                  << "its default value of 7781.\n";
-            satPubHBIP = "tcp://127.0.0.1:7781";
+            satPubHBIP = portPrefix + "7781";
             cout << "    IP: " << satPubHBIP << "\n";
             satPubHBPort = 7781;
         }
@@ -120,7 +132,7 @@ int main(int argc, char* argv[]){
         else{
             cout << "Port of the socket receiving data from swarmFLP has been set to "
                  << "its default value of 7772.\n";
-            satSubIP = "tcp://127.0.0.1:7772";
+            satSubIP = portPrefix + "7772";
             cout << "    IP: " << satSubIP << "\n";
             satSubPort = 7772;
         }
@@ -138,7 +150,7 @@ int main(int argc, char* argv[]){
         else{
             cout << "Port of the heartbeat socket of TX has been set to "
                  << "its default value of 7782.\n";
-            satSubHBIP = "tcp://127.0.0.1:7782";
+            satSubHBIP = portPrefix + "7782";
             cout << "    IP: " << satSubHBIP << "\n";
             satSubHBPort = 7782;
         }
@@ -157,7 +169,7 @@ int main(int argc, char* argv[]){
         else{
             cout << "Port of the socket sending data to CCS5 has been set to "
                  << "its default value of 7773.\n";
-            ccs5PubIP = "tcp://127.0.0.1:7773";
+            ccs5PubIP = portPrefix + "7773";
             cout << "    IP: " << ccs5PubIP << "\n";
             ccs5PubPort = 7773;
         }
@@ -175,7 +187,7 @@ int main(int argc, char* argv[]){
                 cout << "Port of the extra socket sending data has been set to "
                      << "its default value of 8800.\n";
 
-                extraPubIP = "tcp://127.0.0.1:8800";
+                extraPubIP = portPrefix + "8800";
                 cout << "IP: " << extraPubIP << "\n";
                 extraPubPort = 8800;
             }
