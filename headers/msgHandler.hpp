@@ -16,6 +16,7 @@
 #include <string>
 #include <zmq.hpp>
 #include "./zhelpers.hpp"
+#include <fstream>
 
 class msgHandler {
 
@@ -23,17 +24,21 @@ private:
     std::vector<std::string> msgQueue; 
     int toPort; //Specifies the port the msgHander sends the data to 
     int fromPort; //Specifies the port the msgHandler receives data from 
+    int hbPort;
     bool empty; 
     zmq::socket_t* fromSocket; 
     zmq::socket_t* heartSocket;
     zmq::socket_t* toSocket; 
+    char label;
     bool direction; //0: to Sat; 1: to CCS
     bool whileFlag;
 
 public:
     msgHandler();
 
-    msgHandler(int, int, zmq::socket_t*, zmq::socket_t*, zmq::socket_t*, bool);
+    msgHandler(zmq::socket_t*, int, 
+               zmq::socket_t*, int, 
+               zmq::socket_t*, int, bool);
 
     ~msgHandler();
     

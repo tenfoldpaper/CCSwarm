@@ -85,7 +85,7 @@ int main(int argc, char* argv[]){
             cout << "Port of the socket receiving data from CCS5 has been set to "
                  << ccs5SubPort << ".\n";
             ccs5SubIP = portPrefix + to_string(ccs5SubPort);
-             cout << "    IP: " << ccs5SubIP << "\n";
+            cout << "    IP: " << ccs5SubIP << "\n";
         }
         else{
             cout << "Port of the socket receiving data from CCS5 has been set to "
@@ -249,7 +249,6 @@ int main(int argc, char* argv[]){
         //Part that connects to swarmFLP.
         SAT_publisher = new zmq::socket_t(context, ZMQ_PUB);  
         SAT_subscriber = new zmq::socket_t(context, ZMQ_SUB);
-        SAT_subscriber->setsockopt(ZMQ_SUBSCRIBE, "", 0);
 
         //Part that sends empty heartbeat messages back to the satellite. 
         SAT_pubHeart = new zmq::socket_t(context, ZMQ_REQ);
@@ -261,26 +260,28 @@ int main(int argc, char* argv[]){
         SAT_subHeart->setsockopt(ZMQ_RCVTIMEO, -1); /**/ 
         SAT_subHeart->setsockopt(ZMQ_SNDTIMEO, 500); //This socket should always be 
                                                     //listening
-        
+        if(extraFlag){
+            zmq::socket_t* observer_publisher = new zmq::socket_t(context, ZMQ_PUB);
+            observer_publisher->bind(extraPubIP);
+        }
         cout << "Handling binding and connecting " << endl;
         CCS5_subscriber->bind(ccs5SubIP);
         SAT_publisher->bind(satPubIP);
+        SAT_subscriber->bind(satSubIP);
+        SAT_subscriber->setsockopt(ZMQ_SUBSCRIBE, "", 0);
+        CCS5_publisher->bind(ccs5PubIP);
         SAT_pubHeart->bind(satPubHBIP);
         SAT_subHeart->bind(satSubHBIP);
     };
     auto setupHandlers = [&](){ //Init the handlers with the sockets.
-        COMHandler = new msgHandler(ccs5SubPort, 
-                                    satPubPort,
-                                    CCS5_subscriber, 
-                                    SAT_publisher,
-                                    SAT_pubHeart,
+        COMHandler = new msgHandler(CCS5_subscriber, ccs5SubPort,
+                                    SAT_publisher, satPubPort,
+                                    SAT_pubHeart, satPubHBPort,
                                     false); //Handles COM msg from CCS5
 
-        PayloadHandler = new msgHandler(satSubPort,
-                                        ccs5PubPort,
-                                        SAT_subscriber,
-                                        CCS5_publisher,
-                                        SAT_subHeart,
+        PayloadHandler = new msgHandler(SAT_subscriber, satSubPort,
+                                        CCS5_publisher, ccs5PubPort,
+                                        SAT_subHeart, satSubHBPort,
                                         true); //Handles Payload from SIM
     };
     bool socketFlag = false;
@@ -297,9 +298,7 @@ int main(int argc, char* argv[]){
     setupSockets();
     //Part that enables additional clients to receive data. 
     // TODO: Implement this function. Maybe vectorize the handlers? 
-    if(extraFlag){
-        zmq::socket_t* observer_publisher = new zmq::socket_t(context, ZMQ_PUB);
-    }
+    
     
     
        
