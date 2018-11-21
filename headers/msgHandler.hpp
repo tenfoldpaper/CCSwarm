@@ -1,8 +1,8 @@
 
 /*
  * The message handler is a unidirectional message conveyer. 
- * It continuously listens to the fromPort, and then conveys the message 
- * to the other side. It also handles the INSERT function of the local 
+ * It continuously listens to the fromSocket, and then conveys the message 
+ * to the toSocket. It also handles the INSERT function of the local 
  * SQLite database. 
  *   
  */
